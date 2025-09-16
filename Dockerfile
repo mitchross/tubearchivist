@@ -21,11 +21,14 @@ WORKDIR /
 FROM python:3.11.13-slim-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc libldap2-dev libsasl2-dev libssl-dev git
+    build-essential gcc libldap2-dev libsasl2-dev libssl-dev git \
+    && rm -rf /var/lib/apt/lists/*
 
-# install requirements
+# create a virtual environment and install requirements into it
+RUN python -m venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
 COPY ./backend/requirements.txt /requirements.txt
-RUN pip install --user -r requirements.txt
+RUN pip install --no-cache-dir -r /requirements.txt
 
 # build ffmpeg
 FROM python:3.11.13-slim-bookworm AS ffmpeg-builder
@@ -42,9 +45,10 @@ ARG INSTALL_DEBUG
 
 ENV PYTHONUNBUFFERED=1
 
-# copy build requirements
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+# copy python virtualenv with app dependencies
+COPY --from=builder /opt/venv /opt/venv
+# ensure venv and user-local bin are on PATH for non-root user
+ENV PATH=/opt/venv/bin:/home/ta/.local/bin:/app/.local/bin:$PATH
 
 # copy ffmpeg
 COPY --from=ffmpeg-builder ./ffmpeg/ffmpeg /usr/bin/ffmpeg
@@ -63,12 +67,20 @@ RUN if [ "$INSTALL_DEBUG" ] ; then \
     && pip install --user ipython pytest pytest-django \
     ; fi
 
+# create non-root user and group
+RUN groupadd -g 10001 ta && useradd -u 10001 -g ta -m -s /usr/sbin/nologin ta
+
 # make folders
-RUN mkdir /cache /youtube /app
+RUN mkdir -p /cache /youtube /app /app/.local/bin \
+    /var/cache/nginx /var/log/nginx /var/run/nginx \
+    /var/lib/nginx/body \
+    && chown -R ta:ta /cache /youtube /app /var/cache/nginx /var/log/nginx /var/run/nginx /var/lib/nginx
 
 # copy config files
 COPY docker_assets/nginx.conf /etc/nginx/sites-available/default
-RUN sed -i 's/^user www\-data\;$/user root\;/' /etc/nginx/nginx.conf
+# run nginx as non-root user 'ta' (port 8000 is unprivileged)
+RUN sed -i 's/^user www\-data\;$/user ta\;/' /etc/nginx/nginx.conf \
+    && sed -i 's|pid /run/nginx.pid;|pid /var/run/nginx/nginx.pid;|' /etc/nginx/nginx.conf
 
 # copy application into container
 COPY ./backend /app
@@ -87,5 +99,8 @@ WORKDIR /app
 EXPOSE 8000
 
 RUN chmod +x ./run.sh
+
+# switch to non-root
+USER ta:ta
 
 CMD ["./run.sh"]

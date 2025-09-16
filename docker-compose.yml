@@ -2,24 +2,25 @@ services:
   tubearchivist:
     container_name: tubearchivist
     restart: unless-stopped
-    image: bbilly1/tubearchivist
+    image: tubearchivist:rootless
+    build: .
+    user: "10001:10001"
     ports:
-      - 8000:8000
+      - 18000:8000
     volumes:
-      - media:/youtube
-      - cache:/cache
+      - ./data/media:/youtube
+      - ./data/cache:/cache
     environment:
       - ES_URL=http://archivist-es:9200     # needs protocol e.g. http and port
       - REDIS_CON=redis://archivist-redis:6379
-      - HOST_UID=1000
-      - HOST_GID=1000
-      - TA_HOST=http://tubearchivist.local:8000  # set your host name with protocol and port
+      # running as non-root inside container; avoid host UID/GID chown
+      - TA_HOST=http://127.0.0.1:18000 http://localhost:18000 http://tubearchivist.local:8000  # space-separated hosts with proto[:port]
       - TA_USERNAME=tubearchivist           # your initial TA credentials
       - TA_PASSWORD=verysecret              # your initial TA credentials
       - ELASTIC_PASSWORD=verysecret         # set password for Elasticsearch
       - TZ=America/New_York                 # set your time zone
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 2m
       timeout: 10s
       retries: 3
@@ -38,13 +39,17 @@ services:
     depends_on:
       - archivist-es
   archivist-es:
-    image: bbilly1/tubearchivist-es         # only for amd64, or use official es 8.18.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.18.2
     container_name: archivist-es
     restart: unless-stopped
+    security_opt:
+      - seccomp=unconfined
     environment:
       - "ELASTIC_PASSWORD=verysecret"       # matching Elasticsearch password
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - "xpack.security.enabled=true"
+      - "xpack.security.http.ssl.enabled=false"
+      - "xpack.security.transport.ssl.enabled=false"
       - "discovery.type=single-node"
       - "path.repo=/usr/share/elasticsearch/data/snapshot"
     ulimits:
@@ -57,7 +62,5 @@ services:
       - "9200"
 
 volumes:
-  media:
-  cache:
   redis:
   es:

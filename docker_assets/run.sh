@@ -13,7 +13,8 @@ fi
 if [[ "${TA_AUTO_UPDATE_YTDLP,,}" =~ ^(release|nightly)$ ]]; then
     echo "Updating yt-dlp..."
     preflag=$([[ "${TA_AUTO_UPDATE_YTDLP,,}" == "nightly" ]] && echo "--pre" || echo "")
-    python -m pip install --target=/root/.local/bin --upgrade $preflag "yt-dlp[default]" || {
+  # install into non-root writable path
+  python -m pip install --user --upgrade $preflag "yt-dlp[default]" || {
         echo "yt-dlp update failed"
     }
 fi
