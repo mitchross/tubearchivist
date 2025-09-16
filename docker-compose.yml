@@ -2,8 +2,7 @@ services:
   tubearchivist:
     container_name: tubearchivist
     restart: unless-stopped
-    image: tubearchivist:rootless
-    build: .
+    image: ghcr.io/mitchross/tubearchivist:develop
     user: "10001:10001"
     ports:
       - 18000:8000

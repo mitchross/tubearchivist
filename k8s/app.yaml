@@ -22,7 +22,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: tubearchivist
-          image: your-registry/tubearchivist:rootless
+          image: ghcr.io/mitchross/tubearchivist:develop
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
