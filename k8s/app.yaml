@@ -20,52 +20,58 @@ spec:
         runAsUser: 10001
         runAsGroup: 10001
         fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
-        - name: tubearchivist
-          image: ghcr.io/mitchross/tubearchivist:develop
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8000
-          envFrom:
-            - configMapRef:
-                name: tubearchivist-config
-            - secretRef:
-                name: tubearchivist-secrets
-          volumeMounts:
-            - name: cache
-              mountPath: /cache
-            - name: media
-              mountPath: /youtube
-          readinessProbe:
-            httpGet:
-              path: /api/health/
-              port: 8000
-            initialDelaySeconds: 20
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 6
-          livenessProbe:
-            httpGet:
-              path: /api/health/
-              port: 8000
-            initialDelaySeconds: 60
-            periodSeconds: 20
-            timeoutSeconds: 5
-            failureThreshold: 6
-          resources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: "2"
-              memory: 2Gi
-      volumes:
+      - name: tubearchivist
+        image: ghcr.io/mitchross/tubearchivist:develop
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ "ALL" ]
+        envFrom:
+        - configMapRef:
+            name: tubearchivist-config
+        - secretRef:
+            name: tubearchivist-secrets
+        volumeMounts:
         - name: cache
-          persistentVolumeClaim:
-            claimName: cache-pvc
+          mountPath: /cache
         - name: media
-          persistentVolumeClaim:
-            claimName: media-pvc
+          mountPath: /youtube
+        readinessProbe:
+          httpGet:
+            path: /api/health/
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /api/health/
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 6
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: "2"
+            memory: 2Gi
+      volumes:
+      - name: cache
+        persistentVolumeClaim:
+          claimName: cache-pvc
+      - name: media
+        persistentVolumeClaim:
+          claimName: media-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -76,7 +82,7 @@ spec:
   selector:
     app: tubearchivist
   ports:
-    - name: http
-      port: 8000
-      targetPort: 8000
+  - name: http
+    port: 8000
+    targetPort: 8000
   type: ClusterIP

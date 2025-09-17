@@ -4,7 +4,8 @@ metadata:
   name: cache-pvc
   namespace: tubearchivist
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ "ReadWriteOnce" ]
+  storageClassName: longhorn
   resources:
     requests:
       storage: 10Gi
@@ -15,10 +16,11 @@ metadata:
   name: media-pvc
   namespace: tubearchivist
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ "ReadWriteOnce" ]
+  storageClassName: longhorn
   resources:
     requests:
-      storage: 200Gi
+      storage: 50Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -26,7 +28,8 @@ metadata:
   name: es-data-pvc
   namespace: tubearchivist
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ "ReadWriteOnce" ]
+  storageClassName: longhorn
   resources:
     requests:
       storage: 50Gi

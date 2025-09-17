@@ -7,13 +7,13 @@ metadata:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-    - host: tubearchivist.talos
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: tubearchivist
-                port:
-                  number: 8000
+  - host: tubearchivist.talos
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tubearchivist
+            port:
+              number: 8000

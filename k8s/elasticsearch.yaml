@@ -18,44 +18,49 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
-        - name: elasticsearch
-          image: docker.elastic.co/elasticsearch/elasticsearch:8.18.2
-          ports:
-            - containerPort: 9200
-          securityContext:
-            seccompProfile:
-              type: Unconfined
-          env:
-            - name: ELASTIC_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: tubearchivist-secrets
-                  key: ELASTIC_PASSWORD
-            - name: ES_JAVA_OPTS
-              value: "-Xms1g -Xmx1g"
-            - name: xpack.security.enabled
-              value: "true"
-            - name: xpack.security.http.ssl.enabled
-              value: "false"
-            - name: xpack.security.transport.ssl.enabled
-              value: "false"
-            - name: discovery.type
-              value: single-node
-          volumeMounts:
-            - name: es-data
-              mountPath: /usr/share/elasticsearch/data
-          resources:
-            requests:
-              cpu: 500m
-              memory: 2Gi
-            limits:
-              cpu: "2"
-              memory: 4Gi
-      volumes:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.18.2
+        ports:
+        - containerPort: 9200
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ "ALL" ]
+        env:
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: tubearchivist-secrets
+              key: ELASTIC_PASSWORD
+        - name: ES_JAVA_OPTS
+          value: "-Xms1g -Xmx1g"
+        - name: path.repo
+          value: "/usr/share/elasticsearch/data/snapshot"
+        - name: xpack.security.enabled
+          value: "true"
+        - name: xpack.security.http.ssl.enabled
+          value: "false"
+        - name: xpack.security.transport.ssl.enabled
+          value: "false"
+        - name: discovery.type
+          value: single-node
+        volumeMounts:
         - name: es-data
-          persistentVolumeClaim:
-            claimName: es-data-pvc
+          mountPath: /usr/share/elasticsearch/data
+        resources:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            cpu: "2"
+            memory: 4Gi
+      volumes:
+      - name: es-data
+        persistentVolumeClaim:
+          claimName: es-data-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -66,5 +71,5 @@ spec:
   selector:
     app: archivist-es
   ports:
-    - port: 9200
-      targetPort: 9200
+  - port: 9200
+    targetPort: 9200
